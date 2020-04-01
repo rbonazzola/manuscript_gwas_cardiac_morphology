@@ -138,8 +138,8 @@ By calling $\hat{\textbf{s}}_i=\big(D_{\theta_D^*} \circ E_{\theta_E^*}\big)(\te
 
 $E(\textbf{s}_i)\in\mathbb{R}^{\gamma}$ would then be a low-dimensional representation of the shape $\textbf{s}_i$.
 
-\paragraph{Principal component analysis.}
-PCA is a standard linear technique for dimensionality reduction. In terms of the framework detailed above, it can be obtained by requiring $D$ and $E$ to be linear transformations/mappings.
+\subsubsection{Principal component analysis.}
+PCA is a standard linear technique for dimensionality reduction. In terms of the framework detailed above, it can be obtained by requiring $D$ and $E$ to be linear transformations/mappings and using the $L_2$ norm.
 
 Given a set of 3D shapes $\textbf{s}_i^{(t)}=(x_{i1}^{(t)}, y_{i1}^{(t)}, z_{i1}^{(t)}, ..., x_{iM}^{(t)}, y_{iM}^{(t)}, z_{iM}^{(t)})\in \mathbb{R}^{3M}$, we derive the mean shape and the shape covariance matrix:
 
@@ -157,11 +157,12 @@ The idea is to find a basis of vectors $\mathcal{B}_{K}=\{\}_{i=1}^{K}$ for a fi
 
 %In other words, $\mathcal{B}$ represent the $K$ directions in $\mathbb{R}^{3M}$ of greater variability in left-ventricular shape.
 
-\paragraph{Convolutional mesh-AE.}
+\subsubsection{Convolutional mesh-AE.}
 
-In order to incorporate/leverage information about the topology of the mesh, a convolutional approach was used.
-The encoder $E$ consists of convolutional and pooling layers, whereas $D$ consists of unpooling layers. Since the vertices are not in a rectangular grid, the usual convolution, pooling and unpooling operations defined for such geometry are not adequate for this task and need to be suitably adapted/generalized. There is a number of methods to do this, but they all can be classified into two large groups: spatial or spectral %\cite{\ref{}}
-. In this work we'll apply a method belonging to the latter category, which relies on expressing the features in the Fourier basis of the graph, as will be explained below.
+In an autoencoder, both the encoding and decoding functions are feed-forward neural networks.
+The particular method employed in this work, published in \cite{ref_coma} (based, in turn, on previous work published in \cite{ref_spectral_graph_conv} ), each layer of the encoder and decoder implements convolution operations, in order to leverage information about the local context of each vertex. Furthermore, in order to learn global features, a hierarchical approach is used where each layer of the encoder and decoder implement downsampling and upsampling operations, respectively. 
+ 
+Since the vertices are not in a rectangular grid, the usual convolution, pooling and unpooling operations defined for such geometry (usually employed in image analysis) are not adequate for this task and need to be suitably adapted. There is a number of methods to do this, but they all can be classified into two large groups: spatial or spectral. In this work we'll apply a method belonging to the latter category, which relies on expressing the features in the Fourier basis of the graph, as will be explained below.
 
 The Laplace-Beltrami operator of a graph with adjacency matrix $A$ is defined as
 \begin{equation}
@@ -177,9 +178,8 @@ x\star y =U(U^tx\odot U^ty)
 \noindent where $\odot$ is the element-wise product (also known as Hadamard product)
 \footnote{Can $\textbf{S}$ (the covariance matrix) be thought of as the adjacency matrix of a weighted graph and thus the principal components are just the elements of the Fourier basis of this weighted graph?}
 
-All spectral methods for convolution rely on this definition of convolution, and differ from one another in the form of the kernel/filter utilized. In this work, a parameterization proposed in %\cite{\ref{}}
-will be used. 
-The said method is based on the Chebyshev polynomials $\{T_i\}$. The kernel $g_\xi$ is defined as
+All spectral methods for convolution rely on this definition of convolution, and differ from one another in the form of the kernel/filter utilized. In this work, a parameterization proposed in \cite{ref_spectral_graph_conv} will be used. 
+Said method is based on the Chebyshev polynomials $\{T_i\}$. The kernel $g_\xi$ is defined as
 
 \begin{equation}
 g_{\xi}=\sum_{i=1}^{K}\xi_i T_i.
@@ -187,7 +187,7 @@ g_{\xi}=\sum_{i=1}^{K}\xi_i T_i.
 
 Chebyshev polynomials have the advantage that they can be computed recursively through the relation $T_i(x)=xT_{i-1}(x)-T_{i-2}(x)$ and the base cases $T_1(x)=1$ and $T_2(x)=x$.
 
-The pooling and unpooling operations used in this work were the ones proposed in cite{\ref{}}.
+The sampling and upsampling operations in this work were proposed in \cite{ref_coma}. In each layer, the sampling operations generate a subgraph of the graph in the previous layer, such that the quadric error is minimized \cite{ref_quadric_error}. The upsampling operations are created while performing the downsampling: the coordinates of the decimated vertices with respect to the remaining vertices are stored for each layer.
 
 \subsection{GWAS}
 According to the traditional GWAS scheme, we tested each genetic variant, $X_i\in\{0,1,2\}$, for association with each of the LV latent features $Z_j$ through a univariate linear model:
@@ -204,32 +204,22 @@ The architecture of the autoencoder is explained in table \ref{table_arch}.
 All of the executions were performed using Amazon Web Services EC2 virtual machines.
 
 \section{Results}
-Statements:
-
-1. The convolutional mesh autoencoder learns a latent basis that allows to reconstruct the cardiac meshes with a lesser amount of components compared to PCA.
-
-2. The components of the latent basis have easy visual interpretations.
-
-3. Some of the components have genetic loci associated. 
-
-4. 
-
-\subsection{Morphological interpretation of the latent basis}
 
 \subsection{Dimensionality reduction of 3D cardiac meshes}
+
+\underline{Plot:} Reconstruction error vs. number of components of the latent space.
 
 \begin{figure}
 \includegraphics[width=\linewidth]{figs/mean_sq_error.png}
 \caption{}
 \end{figure}
 
-
-
 \subsection{Morphological interpretation of the latent basis}
+\underline{Plot:} color maps showing the projection along the normal vector of the deviation from the mean shape.
 
 
 \subsection{GWAS}
-Manhattan plots.
+Manhattan plots of the components of the latent space with significant SNPs. (The rest would go to the supplementary material.)
 
 \begin{figure}
 \includegraphics[width=0.8\linewidth]{figs/manhattan_LVEDV_automatic_adj.png}
@@ -238,10 +228,17 @@ Manhattan plots.
 \end{figure}
 
 
-
-
-
 \section{Discussion}
+
+\textbf{Statements:
+}
+
+1. The convolutional mesh autoencoder learns a latent basis that allows to reconstruct the cardiac meshes with a lesser amount of components compared to PCA.
+
+2. The components of the latent basis have easy visual interpretations.
+
+3. Some of the components have genetic loci associated. 
+
 
 \section{Conclusions}
 One possible future direction of this work is to consider spatio-temporal patterns by using all the phases of the cardiac cycle.
@@ -295,6 +292,8 @@ Ranjan A, Bolkart T, Sanyal S, Black MJ. \textit{Generating 3D Faces Using Convo
 \bibitem{ref_gwas_review}
 Visscher PM, Wray NR, Zhang Q, Sklar P, McCarthy MI, Brown MA, Yang J. \textit{10 Years of GWAS Discovery: Biology, Function, and Translation.} AJHG. Volume 101, Issue 1, 5-22 (2017)
 
+\bibitem{ref_quadric_error}
+Garland M, Heckbert P (1997). Surface Simplification Using Quadric Error Metrics. Proceedings of the ACM SIGGRAPH Conference on Computer Graphics (1997)
 
 \end{thebibliography}
 \end{document}
