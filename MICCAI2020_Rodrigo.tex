@@ -29,7 +29,7 @@
 
 \twocolumn[
 \begin{@twocolumnfalse}
-\title{GWAS of CMR-derived LV morphology represented via graph-convolutional autoencoders in 30k UK Biobank subjects}
+\title{GWAS of CMR-Derived LV Morphology Represented Via Graph-Convolutional Autoencoders in 30k UK Biobank Subjects}
 
 \author{Rodrigo Bonazzola\inst{1} \and
 Andres Diaz-Pinto\inst{1} \and
@@ -53,7 +53,7 @@ IBM Almaden Research Center, San Jose, USA}
 \maketitle              % typeset the header of the contribution
 \begin{abstract}
 The genetic basis of cardiac phenotypes is not yet well understood. Cardiac magnetic resonance (CMR) images, a rich source of structural phenotypes, as well as linked genotype information, were recently made available within the UK Biobank project. Subsequently, a genome-wide association study (GWAS) for left-ventricular (LV) function indices was published using this data, reporting novel genetic loci significantly associated with these phenotypes. However, LV morphological features are yet to be studied in this context. In this work, we performed dimensionality reduction on 3D LV meshes generated from CMR images, which allows us to learn non-local morphological features that constitute a latent basis for the shape. To this end, we used two approaches i) principal component analysis (PCA) and ii) graph-convolutional autoencoders. GWAS was performed on the components of the latent space obtained through each of the methods. Novel genetic loci were discovered which have not been reported in literature, in addition to other loci already known to be associated with cardiac phenotypes. Some of these features were found to be related to cardiac diseases, showing the potential of our approach to pinpoint genetic loci of clinical relevance.
-\keywords{Cardiac MR  \and GWAS \and graph-convolutional autoencoders.}
+\keywords{Cardiac MR  \and GWAS \and Graph-Convolutional Autoencoders.}
 \end{abstract}
   \end{@twocolumnfalse}
 ]
@@ -77,7 +77,7 @@ In the second one \cite{ref_nayaung}, the authors focused on CMR imaging data fr
 However, instead of extracting handcrafted features from the images (such as the ones mentioned above), the unprecedented amount of linked genetic and cardiac imaging data available within the UK Biobank allows for a different kind of approach: techniques of unsupervised machine learning can be employed in order to automatically learn a set of features that best describe the morphology of the heart. 
 The hypothesis is that these learnt features, by virtue of its greater variability across the population, will be good candidate IDPs on which to perform genetic association analysis, in the sense that some of them would be expected to be largely heritable.
 
-The contributions of this paper are three-fold. Firstly, we reproduce the results in \cite{ref_nayaung} using a superset of \NCMR\, UKB participants, and extend the analysis to consider the equivalent quantities for the other three cardiac chambers: right ventricle (RV), left atrium (LA) and right atrium (RA).
+The contributions of this paper are threefold. Firstly, we reproduce the results in \cite{ref_nayaung} using a superset of \NCMR\, UKB participants, and extend the analysis to consider the equivalent quantities for the other three cardiac chambers: right ventricle (RV), left atrium (LA) and right atrium (RA).
 Secondly, we prove that a deep-learning-based dimensionality reduction method (namely, an autoencoder with convolutional layers) allows to reconstruct the different chambers with an acceptable error, and that the learnt space has an easy morphofological interpretation. Thirdly, we perform GWAS on the components of this latent space.
 
 \section{Methods}
@@ -94,7 +94,7 @@ The data used for this work comes from the UKB project, data accession number \A
 The CMR imaging protocol used to obtain the raw imaging data is described elsewhere \cite{ref_ukbb_cmr}. 
 
 \paragraph{Segmentation algorithm.}
-The segmentation algorithm is described in detail in \cite{ref_rahman}, the output of which is a set of 3D meshes. 
+The segmentation algorithm is described in detail in \cite{ref_rahman}, the output of which is a set of 3D meshes, one per subject and per time point. 
 
 Each cardiac mesh, $\mathcal{G}_{i}^{(t)}$, consists of a set of vertices and edges $\mathcal{G}_{i}^{(t)}=\{\mathcal{V}_{i}^{(t)}, \mathcal{E}_{i}^{(t)}\}$ describing the LV shape for individual $i$ at instant $t\in[0,1)$ of the cardiac cycle, where the cardiac period is normalized to 1 for each individual and $t=0$ is the end-diastolic phase (whereas end-systole varies across individuals but lies typically in the range ??? 18-19/50). Notice that in order to convert from these normalized time units to real time units, the pulse rate needs to be used.
 
@@ -139,7 +139,7 @@ By calling $\hat{\textbf{s}}_i=\big(D_{\theta_D^*} \circ E_{\theta_E^*}\big)(\te
 $E(\textbf{s}_i)\in\mathbb{R}^{\gamma}$ would then be a low-dimensional representation of the shape $\textbf{s}_i$.
 
 \paragraph{Principal component analysis.}
-PCA is a standard linear technique for dimensionality reduction. In terms of the framework detailed above, it can be obtained by requiring $D$ and $E$ to be linear transformations/mappings.
+PCA is a standard linear technique for dimensionality reduction. In terms of the framework detailed above, it can be obtained by requiring $D$ and $E$ to be linear transformations/mappings and using the $L_2$ norm.
 
 Given a set of 3D shapes $\textbf{s}_i^{(t)}=(x_{i1}^{(t)}, y_{i1}^{(t)}, z_{i1}^{(t)}, ..., x_{iM}^{(t)}, y_{iM}^{(t)}, z_{iM}^{(t)})\in \mathbb{R}^{3M}$, we derive the mean shape and the shape covariance matrix:
 
@@ -161,7 +161,7 @@ The idea is to find a basis of vectors $\mathcal{B}_{K}=\{\}_{i=1}^{K}$ for a fi
 
 In order to incorporate/leverage information about the topology of the mesh, a convolutional approach was used.
 The encoder $E$ consists of convolutional and pooling layers, whereas $D$ consists of unpooling layers. Since the vertices are not in a rectangular grid, the usual convolution, pooling and unpooling operations defined for such geometry are not adequate for this task and need to be suitably adapted/generalized. There is a number of methods to do this, but they all can be classified into two large groups: spatial or spectral %\cite{\ref{}}
-. In this work we'll apply a method belonging to the latter category, which relies on expressing the features in the Fourier basis of the graph, as will be explained below.
+. In this work we'll apply a method belonging to the latter category, which relies on expressing the features in the Fourier basis of the graph, as explained below.
 
 The Laplace-Beltrami operator of a graph with adjacency matrix $A$ is defined as
 \begin{equation}
@@ -214,8 +214,6 @@ Statements:
 
 4. 
 
-\subsection{Morphological interpretation of the latent basis}
-
 \subsection{Dimensionality reduction of 3D cardiac meshes}
 
 \begin{figure}
@@ -244,6 +242,7 @@ Manhattan plots.
 \section{Discussion}
 
 \section{Conclusions}
+
 One possible future direction of this work is to consider spatio-temporal patterns by using all the phases of the cardiac cycle.
 
 \newpage
