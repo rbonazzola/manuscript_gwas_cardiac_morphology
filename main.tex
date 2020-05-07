@@ -14,7 +14,8 @@
 \newcommand{\NIMP}{10,000,000\,} % number of imputed variants with MAF > threshold
 \newcommand{\HWEPVAL}{1e-4} % Hardy-Weinberg equilibrium p-value threshold
 \newcommand{\LVNP}{2,677} % number of points in the LV mesh
-\newcommand{\LVENDONP}{880} % number of points in the LV endocardial mesh
+\newcommand{\LVENDONP}{880} % number of points in the LV
+\newcommand{\NGWASHITS}{10}
 
 % ANONYMIZED VERSION 
 %\newcommand{\ACCESSIONNUMBER}{---}
@@ -31,11 +32,12 @@
 \begin{@twocolumnfalse}
 \title{GWAS of CMR-Derived LV Morphology Represented Via Graph-Convolutional Autoencoders in 30k UK Biobank Subjects}
 
-\author{Rodrigo Bonazzola\inst{1} \and
-Andres Diaz-Pinto\inst{1} \and
-Rahman Attar\inst{1} \and
-Nishant Ravikumar\inst{1} \and
+\author{Rodrigo Bonazzola\inst{1,2} \and
+Andres Diaz-Pinto\inst{1,2} \and
+Rahman Attar\inst{1,2} \and
+Nishant Ravikumar\inst{1,2} \and
 Eylem Levelt\inst{2} \and
+Sven Plein\inst{2}
 Enzo Ferrante\inst{3} \and
 Tanveer Syeda-Mahmood\inst{4}\and
 Alejandro F Frangi\inst{1,2}}
@@ -46,8 +48,8 @@ Alejandro F Frangi\inst{1,2}}
 % If there are more than two authors, 'et al.' is used.
 %
 
-\institute{Centre for Computational Imaging and Simulation Technologies in Biomedicine (CISTIB), School of Computing, University of Leeds, Leeds, UK \email{r.bonazzola1@leeds.ac.uk} \and
-Center for Computational Imaging and Simulation Technologies in Biomedicine, School of Medicine, University of Leeds, Leeds, UK \and
+\institute{Centre for Computational Imaging and Simulation Technologies in Biomedicine (CISTIB), School of Computing and School of Medicine, University of Leeds, Leeds, UK \and
+Leeds Institute of Cardiovascular and Metabolic Medicine, School of Medicine, University of Leeds, Leeds, UK \and
 Research Institute for Signals, Systems and Computational Intelligence, sinc(i), FICH-UNL / CONICET, Santa Fe, Argentina \and
 IBM Almaden Research Center, San Jose, USA}
 \maketitle              % typeset the header of the contribution
@@ -81,11 +83,14 @@ The contributions of this paper are threefold. Firstly, we reproduce the results
 Secondly, we prove that a deep-learning-based dimensionality reduction method (namely, an autoencoder with convolutional layers) allows to reconstruct the different chambers with an acceptable error, and that the learnt space has an easy morphofological interpretation. Thirdly, we perform GWAS on the components of this latent space.
 
 \section{Methods}
-The workflow is shown in figure% \ref{}.
+The workflow is shown in figure \ref{fig_workflow}.
 
-%\begin{figure}
-%\includegraphics[width=0.2\linewidth]{figs/workflow.png} 
-%\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=0.8\linewidth]{figs/workflow.png} 
+\caption{Flowchart of the steps performed in this work}
+\label{fig_workflow}
+\end{figure}
 
 \subsection{Description of the data}
 The data used for this work comes from the UKB project, data accession number \ACCESSIONNUMBER.
@@ -94,7 +99,7 @@ The data used for this work comes from the UKB project, data accession number \A
 The CMR imaging protocol used to obtain the raw imaging data is described elsewhere \cite{ref_ukbb_cmr}. 
 
 \paragraph{Segmentation algorithm.}
-The segmentation algorithm is described in detail in \cite{ref_rahman}, the output of which is a set of 3D meshes, one per subject and per time point. 
+The CMR images were segmented automatically using an algorithm that is described in detail in \cite{ref_rahman}, the output of which is a set of 3D meshes, one per subject and per time point. 
 
 Each cardiac mesh, $\mathcal{G}_{i}^{(t)}$, consists of a set of vertices and edges $\mathcal{G}_{i}^{(t)}=\{\mathcal{V}_{i}^{(t)}, \mathcal{E}_{i}^{(t)}\}$ describing the LV shape for individual $i$ at instant $t\in[0,1)$ of the cardiac cycle, where the cardiac period is normalized to 1 for each individual and $t=0$ is the end-diastolic phase (whereas end-systole varies across individuals but lies typically in the range ??? 18-19/50). Notice that in order to convert from these normalized time units to real time units, the pulse rate needs to be used.
 
@@ -102,11 +107,9 @@ Each element of $\mathcal{V}_i$ is a 3D point $\textbf{x}_{ij}^{(t)}=(x_{ij}^{(t
 
 In our particular case, this becomes significantly simpler since the connectivity of the meshes is inherited from the connectivity of a reference shape (atlas), and thus all the meshes have not only the same number of vertices but also the same connectivity, both across individuals and across phases; i.e. $M=|\mathcal{V}_k^{(t_1)}|=|\mathcal{V}_l^{(t_2)}|$ and $
 \mathcal{E}:=\mathcal{E}_{k}^{(t_1)}=\mathcal{E}_{l}^{(t_2)}$, $\forall k, l, t_1, t_2$.
-\footnote{CLARIFICATION (This could go to supplementary material): in more rigor, the endocardial and epicardial meshes are derived each from a different atlas and then a merging procedure is applied in order to obtain a single mesh for both walls. Notice that since the whole shape does not come from one single atlas, there is no guarantee that the connectivity of the resulting mesh will be the same for different individuals (it depends on the nature of the merging procedure selected, and if it is based on distances between vertices, it could certainly not be the case since the neighboring vertices in different meshes). To overcome this inconvenient situation, the merging procedure is applied to a single mesh, and the resulting connectivity is applied to the rest of the meshes.}
+% \footnote{CLARIFICATION (This could go to supplementary material): in more rigor, the endocardial and epicardial meshes are derived each from a different atlas and then a merging procedure is applied in order to obtain a single mesh for both walls. Notice that since the whole shape does not come from one single atlas, there is no guarantee that the connectivity of the resulting mesh will be the same for different individuals (it depends on the nature of the merging procedure selected, and if it is based on distances between vertices, it could certainly not be the case since the neighboring vertices in different meshes). To overcome this inconvenient situation, the merging procedure is applied to a single mesh, and the resulting connectivity is applied to the rest of the meshes.}
 
 An alternative way to express the connectivity of the mesh is through the adjacency matrix $A\in\{0,1\}^{M\times M}$, where $A_{ij}=1$ if vertex $i$ is connected to vertex $j$, and is zero otherwise. This way of representing the connectivity is useful in the context of spectral graph theory, as will be explained in more detail in subsection ??.
-
-\paragraph{Mesh pre-processing.} Each mesh is Procrustes-alligned and scaled to a single shape used as reference. The reason a scaling used is that the size of the chamber
 
 
 \subsubsection{Genotypic data}
@@ -114,17 +117,34 @@ SNP microarray data is available for all the individuals in the UK Biobank cohor
 
 
 \subsection{Dimensionality reduction}
-In order to extract a reduced set of features that describe left-ventricular shape, two methods were utilised: principal component analysis (PCA) and mesh-convolutional autoencoders. In the first case only 3D point clouds are provided as input, whereas in the second case we also leverage information about connectivity between the vertices. However, both approaches can be thought of as special cases of a common paradigm.
 
-In such paradigm, there is a pair of encoding and decoding functions, $E_{\theta_E}:\mathbb{R}^{3M}\rightarrow\mathbb{R}^{\gamma}$ and $D_{\theta_D}:\mathbb{R}^{\gamma}\rightarrow\mathbb{R}^{3M}$ that are parameterized by a set of parameters $\theta_E$ and $\theta_D$, respectively. $\gamma$ is usually chosen so that $\gamma\ll M$ (hence the dimensionality reduction). 
-
-The optimal parameters $\theta_E^*$ and $\theta_D^*$ for reconstruction can be learnt by making the composite function $D_{\theta_D} \circ E_{\theta_E}$ as close to the identity function $I$ as possible for the data in the training set, using some reasonable loss function such as the squared $L_2$ norm of the element-wise difference; that is to say
+\paragraph{Mesh pre-processing.} First of all, the pose nuisance parameters (translation, rotation and scaling) are removed using generalized Procrustes analysis. 
+Given a set of 3D shapes % $\textbf{s}_i^{(t)}=(x_{i1}^{(t)}, y_{i1}^{(t)}, z_{i1}^{(t)}, ..., x_{iM}^{(t)}, y_{iM}^{(t)}, z_{iM}^{(t)})\in \mathbb{R}^{3M}$,
+$\textbf{s}_i=(x_{i1}, y_{i1}, z_{i1}, ..., x_{iM}, y_{iM}, z_{iM})\in \mathbb{R}^{3M}$,
+we derive the mean shape and the shape covariance matrix:
 
 \begin{equation}
-L(\textbf{s}|\theta_E, \theta_D)=
-\sum_{i=1}^{N} \big|\big|\big(D_{\theta_D} \circ E_{\theta_E} - I\big) (\textbf{s}_i) \big|\big|_2^2
-\end{equation}{}
+\bar{\textbf{s}}=\frac{1}{N}\sum_{i=1}^{N}{\textbf{s}}_i,
+\end{equation}
 
+\begin{equation}
+\textbf{S}=\frac{1}{N-1}\sum_{i=1}^{N}({\textbf{s}}_i-\bar{\textbf{s}})({\textbf{s}}_i-\bar{\textbf{s}})^t.
+\end{equation}
+
+In order to extract a reduced set of features that describe left-ventricular shape, two methods were utilised: principal component analysis (PCA) and mesh-convolutional autoencoders. In the first case only 3D point clouds are provided as input, whereas in the second case we also leverage information about connectivity between the vertices. However, both approaches can be thought of as special cases of a common paradigm.
+
+In such paradigm, there is a pair of encoding and decoding functions, $E_{\theta_E}:\mathbb{R}^{3M}\rightarrow\mathbb{R}^{K}$ and $D_{\theta_D}:\mathbb{R}^{K}\rightarrow\mathbb{R}^{3M}$ that are parameterized by a set of parameters $\theta_E$ and $\theta_D$, respectively. $K$ is usually chosen so that $K\ll M$ (hence the dimensionality reduction). 
+
+The optimal parameters $\theta_E^*$ and $\theta_D^*$ for reconstruction can be learnt by making the composite function $D_{\theta_D} \circ E_{\theta_E}$ as close to the identity function $I$ as possible for the data in the training set, using some reasonable loss function such as the squared $L_2$ norm of the element-wise difference, along with a regularization term $\Omega$; that is to say
+
+\begin{equation}
+L_2^2(\textbf{s}|\theta_E, \theta_D)=
+\sum_{i=1}^{N} \big|\big|\big(D_{\theta_D} \circ E_{\theta_E} - I\big) (\textbf{s}_i) \big|\big|_2^2
+\end{equation}
+
+\begin{equation}
+L(\textbf{s}|\theta_E, \theta_D)= L_2^2(\textbf{s}|\theta_E, \theta_D) + \lambda\Omega(\textbf{s}|\theta_E, \theta_D)
+\end{equation}
 
 \begin{equation}
 (\theta_E^*, \theta_D^*) = \text{argmin}_{\theta_E, \theta_D}L(\textbf{s}|\theta_E, \theta_D).    
@@ -136,20 +156,10 @@ L(\textbf{s}|\theta_E, \theta_D)=
 
 By calling $\hat{\textbf{s}}_i=\big(D_{\theta_D^*} \circ E_{\theta_E^*}\big)(\textbf{s}_i)$
 
-$E(\textbf{s}_i)\in\mathbb{R}^{\gamma}$ would then be a low-dimensional representation of the shape $\textbf{s}_i$.
+$\textbf{Z}_i\equiv E(\textbf{s}_i)\in\mathbb{R}^{\gamma}$ would then be a low-dimensional representation of the shape $\textbf{s}_i$.
 
 \subsubsection{Principal component analysis.}
 PCA is a standard linear technique for dimensionality reduction. In terms of the framework detailed above, it can be obtained by requiring $D$ and $E$ to be linear transformations/mappings and using the $L_2$ norm.
-
-Given a set of 3D shapes $\textbf{s}_i^{(t)}=(x_{i1}^{(t)}, y_{i1}^{(t)}, z_{i1}^{(t)}, ..., x_{iM}^{(t)}, y_{iM}^{(t)}, z_{iM}^{(t)})\in \mathbb{R}^{3M}$, we derive the mean shape and the shape covariance matrix:
-
-\begin{equation}
-\bar{\textbf{s}}=\frac{1}{N}\sum_{i=1}^{N}{\textbf{s}}_i,
-\end{equation}
-
-\begin{equation}
-\textbf{S}=\frac{1}{N-1}\sum_{i=1}^{N}({\textbf{s}}_i-\bar{\textbf{s}})({\textbf{s}}_i-\bar{\textbf{s}})^t.
-\end{equation}
 
 The idea is to find a basis of vectors $\mathcal{B}_{K}=\{\}_{i=1}^{K}$ for a fixed $K < 3M$, such that the $K$-dimensional linear subspace generated by $\mathcal{B}$ captures as much of the shape variability in LV shape as possible. It can be shown that such basis corresponds to the $K$ eigenvectors of the $\textbf{S}$ matrix with the top largest eigenvalues; i.e. if $\textbf{S}=\Omega^{t}\Lambda\Omega$ where $\Lambda=\delta_{ij}\lambda_i$ and $\lambda_i \geq \lambda_j$ if $i\leq j$, then $\mathcal{B}_{K}=\{{\Omega\textbf{e}_i}\}_{i=1}^{K}$.
 
@@ -160,7 +170,7 @@ The idea is to find a basis of vectors $\mathcal{B}_{K}=\{\}_{i=1}^{K}$ for a fi
 \subsubsection{Convolutional mesh-AE.}
 
 In an autoencoder, both the encoding and decoding functions are feed-forward neural networks.
-The particular method employed in this work, published in \cite{ref_coma} (based, in turn, on previous work published in \cite{ref_spectral_graph_conv} ), each layer of the encoder and decoder implements convolution operations, in order to leverage information about the local context of each vertex. Furthermore, in order to learn global features, a hierarchical approach is used where each layer of the encoder and decoder implement downsampling and upsampling operations, respectively. 
+In the particular method employed in this work, published in \cite{ref_coma} (based, in turn, on previous work published in \cite{ref_spectral_graph_conv} ), each layer of the encoder and decoder implements convolution operations, in order to leverage information about the local context of each vertex. Furthermore, in order to learn global features, a hierarchical approach is used where each layer of the encoder and decoder implement downsampling and upsampling operations, respectively. 
  
 Since the vertices are not in a rectangular grid, the usual convolution, pooling and unpooling operations defined for such geometry (usually employed in image analysis) are not adequate for this task and need to be suitably adapted. There is a number of methods to do this, but they all can be classified into two large groups: spatial or spectral. In this work we'll apply a method belonging to the latter category, which relies on expressing the features in the Fourier basis of the graph, as will be explained below.
 
@@ -183,11 +193,17 @@ Said method is based on the Chebyshev polynomials $\{T_i\}$. The kernel $g_\xi$ 
 
 \begin{equation}
 g_{\xi}=\sum_{i=1}^{K}\xi_i T_i.
+\label{eq_chebyshev_filter}
 \end{equation}
 
-Chebyshev polynomials have the advantage that they can be computed recursively through the relation $T_i(x)=xT_{i-1}(x)-T_{i-2}(x)$ and the base cases $T_1(x)=1$ and $T_2(x)=x$.
+Chebyshev polynomials have the advantage that they can be computed recursively through the relation $T_i(x)=xT_{i-1}(x)-T_{i-2}(x)$ and the base cases $T_1(x)=1$ and $T_2(x)=x$. The filter described by equation \ref{eq_chebyshev_filter} also has the characteristic of being local (EXPAND ON THIS)
 
 The sampling and upsampling operations in this work were proposed in \cite{ref_coma}. In each layer, the sampling operations generate a subgraph of the graph in the previous layer, such that the quadric error is minimized \cite{ref_quadric_error}. The upsampling operations are created while performing the downsampling: the coordinates of the decimated vertices with respect to the remaining vertices are stored for each layer.
+
+In this work, the input to the autoencoder is a modified version of the shapes $\textbf{s}_i\mapsto \textbf{t}_i=(\textbf{s}_i-\bar{\textbf{s}})/\textbf{S}_{ii}$.
+%$\textbf{s_i}\mapsto (\textbf{s_i}-\bar{\textbf{s})/S_{ii}$
+
+The dimension of the latent space was chosen to achieve a compromise between reconstruction error and interpretability/heritability of the components (comment for revisers: I expect interpretability and heritability to be correlated).
 
 \subsection{GWAS}
 According to the traditional GWAS scheme, we tested each genetic variant, $X_i\in\{0,1,2\}$, for association with each of the LV latent features $Z_j$ through a univariate linear model:
@@ -196,29 +212,86 @@ According to the traditional GWAS scheme, we tested each genetic variant, $X_i\i
 Z_j = \beta_{ij}X_i+\epsilon_{ij}
 \end{equation}
 
-\noindent where $\epsilon_{ij}$ is the component not explained by the genotype, which we assumed to be normally distributed. The null hypothesis tested is that $\beta_{ij}=0$.
+\noindent where $\epsilon_{ij}$ is the component not explained by the genotype, assumed to be normally distributed. The null hypothesis tested is that $\beta_{ij}=0$.
 
 \subsection{Implementation details}
-The architecture of the autoencoder is explained in table \ref{table_arch}.
+The architecture of the autoencoder is explained in table \ref{table_AE_arch}.
+We ran a grid optimization scheme to determine good network parameters, both for the architecture and the learning process.
 
-All of the executions were performed using Amazon Web Services EC2 virtual machines.
+All of the executions were performed using Amazon Web Services EC2 virtual machines, in particular P2 instances with NVidia K80 GPUs.
 
 \section{Results}
 
-\subsection{Dimensionality reduction of 3D cardiac meshes}
+\subsection{Traditional cardiac indices}
 
-\underline{Plot:} Reconstruction error vs. number of components of the latent space.
+\subsection{Dimensionality reduction of 3D cardiac meshes}
+Figure \ref{fig_pca_vs_coma} shows a comparison of the reconstruction error obtained through PCA and CoMA, as a function of the number of the components $K$ of the latent space. 
 
 \begin{figure}
-\includegraphics[width=\linewidth]{figs/mean_sq_error.png}
-\caption{}
+\includegraphics[width=\linewidth]{figs/mse_pca_vs_coma.jpg}
+\caption{Dependence of the reconstruction error with the number of components in the latent space, for PCA and CoMA.}
+\label{fig_pca_vs_coma}
 \end{figure}
 
+
+
+\begin{figure}
+\includegraphics[width=\linewidth]{figs/qqplot_ncomp.jpg}
+\caption{QQ plot showing the deviation of the association p-values from the uniform distribution.}
+\label{fig_qqplot_pooled}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=\linewidth]{figs/corrplot_z_vs_demographic_data.jpeg}
+\caption{Correlation plot of the components of the latent space against demographic data.}
+\end{figure}
+
+
 \subsection{Morphological interpretation of the latent basis}
-\underline{Plot:} color maps showing the projection along the normal vector of the deviation from the mean shape.
+
+\begin{center}
+\begin{tabular}{ |c|c|c|c| } 
+\hline
+Feature & Interpretation & \# of GWAS hits \\
+\hline
+$z_1^{\text{LV}}$ & sphericity & 3 \\ 
+\hline
+$z_2^{\text{LV}}$ & orientation of mitral valve & 2\\ 
+\hline
+$z_3^{\text{LV}}$ & thickening of miocardium & 1 \\ 
+\hline
+$z_1^{\text{RV}}$ & ??? & 2 \\ 
+\hline
+$z_2^{\text{RV}}$ & ??? & 2 \\ 
+\hline
+$z_3^{\text{RV}}$ & ??? & 1 \\ 
+\hline
+$z_1^{\text{LA}}$ & ???  & 1 \\ 
+\hline
+$z_2^{\text{LA}}$ & ??? & 0 \\ 
+\hline
+$z_3^{\text{LA}}$ & ??? & 0 \\ 
+\hline
+$z_1^{\text{RA}}$ & ??? & 1 \\ 
+\hline
+$z_2^{\text{RA}}$ & ??? & 1 \\ 
+\hline
+$z_3^{\text{RA}}$ & ??? & 0 \\ 
+\hline
+\end{tabular}
+\end{center}
+
+
+
+\begin{figure}
+\caption{color maps showing the projection along the normal vector of the deviation from the mean shape.}
+\end{figure}
 
 
 \subsection{GWAS}
+
+The comparison of the QQ plots for PCA and CoMA shown in figure \ref{fig_qqplot_pooled} reveals that the latter method produce more significant associations with the genotype. In other words, CoMA allows to extract phenotypes with higher heritability.
+
 Manhattan plots of the components of the latent space with significant SNPs. (The rest would go to the supplementary material.)
 
 \begin{figure}
@@ -230,8 +303,7 @@ Manhattan plots of the components of the latent space with significant SNPs. (Th
 
 \section{Discussion}
 
-\textbf{Statements:
-}
+\textbf{Statements:}
 
 1. The convolutional mesh autoencoder learns a latent basis that allows to reconstruct the cardiac meshes with a lesser amount of components compared to PCA.
 
@@ -239,8 +311,15 @@ Manhattan plots of the components of the latent space with significant SNPs. (Th
 
 3. Some of the components have genetic loci associated. 
 
+The components of the latent space are significantly different for individuals with some diagnosed diseases, with respect to the healthy (or undiagnosed) individuals.
 
 \section{Conclusions}
+
+In this work, we have surveyed a set of indices describing structure of the different cardiac chambers in the context of genetic association analysis. In addition to commonly used clinical indices (such as chamber volume, ejection fraction and stroke volume), indices that describing the shape of the chambers were derived using two different dimensionality reduction techniques on the scaled 3D meshes: principal component analysis (PCA) and convolutional mesh-autoencoders (CoMA).
+
+Since these latent features were learnt in a unsupervised manner, the interpretation of the latent space had to be performed \emph{a posteriori}. Some of the features were related to sphericity, wall thickness and valve orientation, whereas others had no easy interpretation.
+
+The analysis of the GWAS results yielded $\NGWASHITS$ significant genetic loci at a Bonferroni threshold of $0.05/(\NIMP\times8)$. Moreover, the significance of the associations for CoMA was higher than for PCA, confirming the suitability of that technique to extract heritable phenotypes.
 
 One possible future direction of this work is to consider spatio-temporal patterns by using all the phases of the cardiac cycle.
 
