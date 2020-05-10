@@ -4,6 +4,8 @@
 \usepackage{amssymb}
 \usepackage{amsmath}
 \usepackage[legalpaper, margin=0.8in]{geometry}
+\usepackage{soul}
+\usepackage{xcolor}
 
 \setlength{\columnsep}{0.3in}
 
@@ -83,13 +85,13 @@ The contributions of this paper are threefold. Firstly, we reproduce the results
 Secondly, we prove that a deep-learning-based dimensionality reduction method (namely, an autoencoder with convolutional layers) allows to reconstruct the different chambers with an acceptable error, and that the learnt space has an easy morphofological interpretation. Thirdly, we perform GWAS on the components of this latent space.
 
 \section{Methods}
-The workflow is shown in figure \ref{fig_workflow}.
+The workflow is shown in figure \ref{fig:workflow}.
 
 \begin{figure}
 \centering
 \includegraphics[width=0.8\linewidth]{figs/workflow.png} 
 \caption{Flowchart of the steps performed in this work}
-\label{fig_workflow}
+\label{fig:workflow}
 \end{figure}
 
 \subsection{Description of the data}
@@ -99,24 +101,33 @@ The data used for this work comes from the UKB project, data accession number \A
 The CMR imaging protocol used to obtain the raw imaging data is described elsewhere \cite{ref_ukbb_cmr}. 
 
 \paragraph{Segmentation algorithm.}
-The CMR images were segmented automatically using an algorithm that is described in detail in \cite{ref_rahman}, the output of which is a set of 3D meshes, one per subject and per time point. 
+The CMR images were segmented automatically using an algorithm that is described in detail in \cite{ref_rahman}, the output of which is a set of 3D meshes, one per subject and per time point.
 
-Each cardiac mesh, $\mathcal{G}_{i}^{(t)}$, consists of a set of vertices and edges $\mathcal{G}_{i}^{(t)}=\{\mathcal{V}_{i}^{(t)}, \mathcal{E}_{i}^{(t)}\}$ describing the LV shape for individual $i$ at instant $t\in[0,1)$ of the cardiac cycle, where the cardiac period is normalized to 1 for each individual and $t=0$ is the end-diastolic phase (whereas end-systole varies across individuals but lies typically in the range ??? 18-19/50). Notice that in order to convert from these normalized time units to real time units, the pulse rate needs to be used.
+Each cardiac mesh, $\mathcal{G}_{i}^{(t)}$, consists of a set of vertices and edges $\mathcal{G}_{i}^{(t)}=\{\mathcal{V}_{i}^{(t)}, A_{i}^{(t)}\}$ describing the shape for individual $i$ at instant $t\in[0,1)$ of the cardiac cycle. The cardiac period is normalized to 1 for each individual and $t=0$ is the end-diastolic phase %(whereas end-systole varies across individuals but lies typically in the range ??? 18-19/50).
+\footnote{Notice that in order to convert from these normalized time units to real time units, the pulse rate needs to be used.}. In this work, we only investigate $t=0$ (end-diastole), so the temporal superindex will be dropped in the following. Each element of $\mathcal{V}_i$ is a 3D point $\textbf{x}_{ij}=(x_{ij}, y_{ij}, z_{ij}),\, j=1,...,M,\ i=1,...,N$, and $A_{i}\in\{0,1\}^{M\times M}$ is the adjacency matrix of the mesh, where $(A_i)_{j_1j_2}=1$ if and only if there is an edge between vertices $j_1$ and $j_2$ in the mesh of subject $i$.
+\textcolor{red}{Probably I should add an index to denote the cardiac chamber.}
 
-Each element of $\mathcal{V}_i$ is a 3D point $\textbf{x}_{ij}^{(t)}=(x_{ij}^{(t)}, y_{ij}^{(t)}, z_{ij}^{(t)}),\, j=1,...,M,\ i=1,...,N$, and $(\textbf{x}_{ij_1}^{(t)}, \textbf{x}_{ij_2}^{(t)})\in\mathcal{V}_i^{(t)}$ means that there is an edge between vertices $j_1$ and $j_2$ in the cardiac mesh of subject $i$ at time $t$.
 
-In our particular case, this becomes significantly simpler since the connectivity of the meshes is inherited from the connectivity of a reference shape (atlas), and thus all the meshes have not only the same number of vertices but also the same connectivity, both across individuals and across phases; i.e. $M=|\mathcal{V}_k^{(t_1)}|=|\mathcal{V}_l^{(t_2)}|$ and $
-\mathcal{E}:=\mathcal{E}_{k}^{(t_1)}=\mathcal{E}_{l}^{(t_2)}$, $\forall k, l, t_1, t_2$.
+In our particular case, this becomes significantly simpler since the connectivity of the meshes is inherited from a reference atlas, and thus all the meshes have not only the same number of vertices but also the same connectivity, both across individuals and across phases; i.e. $M=|\mathcal{V}_k|=|\mathcal{V}_l|$ and $A:=A_{k}=A_{l}$, $\forall k, l$.
+
+ %An alternative way to express the connectivity of the mesh is through the adjacency matrix , where $A_{ij}=1$ if vertex $i$ is connected to vertex $j$, and is zero otherwise. This way of representing the connectivity is useful in the context of spectral graph theory, as will be explained in more detail in subsection \ref{results:dimensionality_reduction}.
+
+% Each element of $\mathcal{V}_i$ is a 3D point $\textbf{x}_{ij}=(x_{ij}, y_{ij}, z_{ij}),\, j=1,...,M,\ i=1,...,N$, and $(\textbf{x}_{ij_1}, \textbf{x}_{ij_2})\in\mathcal{V}_i$ means that there is an edge between vertices $j_1$ and $j_2$ in the cardiac mesh of subject $i$ at time $t$. In our particular case, this becomes significantly simpler since the connectivity of the meshes is inherited from a reference atlas, and thus all the meshes have not only the same number of vertices but also the same connectivity, both across individuals and across phases; i.e. $M=|\mathcal{V}_k^{(t_1)}|=|\mathcal{V}_l^{(t_2)}|$ and $A:=A_{k}=\mathcal{E}_{l}^{(t_2)}$, $\forall k, l, t_1, t_2$.
+
+%Each cardiac mesh, $\mathcal{G}_{i}^{(t)}$, consists of a set of vertices and edges $\mathcal{G}_{i}^{(t)}=\{\mathcal{V}_{i}^{(t)}, \mathcal{E}_{i}^{(t)}\}$ describing the LV shape for individual $i$ at instant $t\in[0,1)$ of the cardiac cycle, where the cardiac period is normalized to 1 for each individual and $t=0$ is the end-diastolic phase (whereas end-systole varies across individuals but lies typically in the range ??? 18-19/50). Notice that in order to convert from these normalized time units to real time units, the pulse rate needs to be used.
+
 % \footnote{CLARIFICATION (This could go to supplementary material): in more rigor, the endocardial and epicardial meshes are derived each from a different atlas and then a merging procedure is applied in order to obtain a single mesh for both walls. Notice that since the whole shape does not come from one single atlas, there is no guarantee that the connectivity of the resulting mesh will be the same for different individuals (it depends on the nature of the merging procedure selected, and if it is based on distances between vertices, it could certainly not be the case since the neighboring vertices in different meshes). To overcome this inconvenient situation, the merging procedure is applied to a single mesh, and the resulting connectivity is applied to the rest of the meshes.}
 
-An alternative way to express the connectivity of the mesh is through the adjacency matrix $A\in\{0,1\}^{M\times M}$, where $A_{ij}=1$ if vertex $i$ is connected to vertex $j$, and is zero otherwise. This way of representing the connectivity is useful in the context of spectral graph theory, as will be explained in more detail in subsection ??.
+% An alternative way to express the connectivity of the mesh is through the adjacency matrix $A\in\{0,1\}^{M\times M}$, where $A_{ij}=1$ if vertex $i$ is connected to vertex $j$, and is zero otherwise. This way of representing the connectivity is useful in the context of spectral graph theory, as will be explained in more detail in subsection \ref{results:dimensionality_reduction}.
 
 
 \subsubsection{Genotypic data}
-SNP microarray data is available for all the individuals in the UK Biobank cohort. This microarray covers \NCALLS\, genetic variants including SNPs and short indels. The design of this microarray has been described in detail in \cite{ref_ukbb_genetics}. From these genotyped markers, an augmented set of \NIMP variants was imputed. The GWAS was performed across this latter set, filtering by a minor allele frequency (MAF) threshold of \MAFTHR and a HWE p-value threshold of \HWEPVAL.
+SNP microarray data is available for all the individuals in the UK Biobank cohort. This microarray covers \NCALLS\, genetic variants including SNPs and short indels. The design of this microarray has been described in detail in %\cite{ref_ukbb_genetics}
+. From these genotyped markers, an augmented set of \NIMP variants was imputed. The GWAS was performed across this latter set, filtering by a minor allele frequency (MAF) threshold of \MAFTHR and a HWE p-value threshold of \HWEPVAL.
 
 
 \subsection{Dimensionality reduction}
+\label{results:dimensionality_reduction}
 
 \paragraph{Mesh pre-processing.} First of all, the pose nuisance parameters (translation, rotation and scaling) are removed using generalized Procrustes analysis. 
 Given a set of 3D shapes % $\textbf{s}_i^{(t)}=(x_{i1}^{(t)}, y_{i1}^{(t)}, z_{i1}^{(t)}, ..., x_{iM}^{(t)}, y_{iM}^{(t)}, z_{iM}^{(t)})\in \mathbb{R}^{3M}$,
@@ -154,14 +165,12 @@ L(\textbf{s}|\theta_E, \theta_D)= L_2^2(\textbf{s}|\theta_E, \theta_D) + \lambda
 %(\theta_E^*, \theta_D^*) = \text{argmin}_{\theta_E, \theta_D}\mathrm{E}_{}\bigg( \big|\big|\big(D_{\theta_D} \circ E_{\theta_E} - I\big) (\textbf{s}_i) \big|\big|_2^2.    
 %\end{equation}{}
 
-By calling $\hat{\textbf{s}}_i=\big(D_{\theta_D^*} \circ E_{\theta_E^*}\big)(\textbf{s}_i)$
-
-$\textbf{Z}_i\equiv E(\textbf{s}_i)\in\mathbb{R}^{\gamma}$ would then be a low-dimensional representation of the shape $\textbf{s}_i$.
+$\textbf{Z}_i:= E_{\theta_E^*}  (\textbf{s}_i)\in\mathbb{R}^{K}$ would then be a low-dimensional representation of the shape $\textbf{s}_i$, whereas $\hat{\textbf{s}}_i:=\big(D_{\theta_D^*} \circ E_{\theta_E^*}\big)(\textbf{s}_i)$ is the associated reconstructed shape.
 
 \subsubsection{Principal component analysis.}
 PCA is a standard linear technique for dimensionality reduction. In terms of the framework detailed above, it can be obtained by requiring $D$ and $E$ to be linear transformations/mappings and using the $L_2$ norm.
 
-The idea is to find a basis of vectors $\mathcal{B}_{K}=\{\}_{i=1}^{K}$ for a fixed $K < 3M$, such that the $K$-dimensional linear subspace generated by $\mathcal{B}$ captures as much of the shape variability in LV shape as possible. It can be shown that such basis corresponds to the $K$ eigenvectors of the $\textbf{S}$ matrix with the top largest eigenvalues; i.e. if $\textbf{S}=\Omega^{t}\Lambda\Omega$ where $\Lambda=\delta_{ij}\lambda_i$ and $\lambda_i \geq \lambda_j$ if $i\leq j$, then $\mathcal{B}_{K}=\{{\Omega\textbf{e}_i}\}_{i=1}^{K}$.
+The idea is to find a basis of vectors $\mathcal{B}_{K}=\{\textbf{v}_i\}_{i=1}^{K}\subset\mathbb{R}^{3M}$ for a fixed $K < 3M$, such that the $K$-dimensional linear subspace generated by $\mathcal{B}$ captures as much of the shape variability as possible. It can be shown that such basis corresponds to the $K$ eigenvectors of the $\textbf{S}$ matrix with the top largest eigenvalues; i.e. if $\textbf{S}=\Omega^{t}\Lambda\Omega$ where $\Lambda=\delta_{ij}\lambda_i$ and $\lambda_i \geq \lambda_j$ if $i\leq j$, then $\mathcal{B}_{K}=\{{\Omega\textbf{e}_i}\}_{i=1}^{K}$.
 
 % One of the drawbacks of this approach is that by the linear nature of the encoding and decoding function, it is unable to capture non-linear features of the shapes.
 
@@ -170,7 +179,7 @@ The idea is to find a basis of vectors $\mathcal{B}_{K}=\{\}_{i=1}^{K}$ for a fi
 \subsubsection{Convolutional mesh-AE.}
 
 In an autoencoder, both the encoding and decoding functions are feed-forward neural networks.
-In the particular method employed in this work, published in \cite{ref_coma} (based, in turn, on previous work published in \cite{ref_spectral_graph_conv} ), each layer of the encoder and decoder implements convolution operations, in order to leverage information about the local context of each vertex. Furthermore, in order to learn global features, a hierarchical approach is used where each layer of the encoder and decoder implement downsampling and upsampling operations, respectively. 
+In the particular method employed in this work (published in \cite{ref_coma} and based, in turn, on previous work published in \cite{ref_spectral_graph_conv}), each layer of the encoder and decoder implements convolution operations, in order to leverage information about the local context of each vertex. Furthermore, in order to learn global features, a hierarchical approach is used where each layer of the encoder and decoder implement downsampling and upsampling operations, respectively. 
  
 Since the vertices are not in a rectangular grid, the usual convolution, pooling and unpooling operations defined for such geometry (usually employed in image analysis) are not adequate for this task and need to be suitably adapted. There is a number of methods to do this, but they all can be classified into two large groups: spatial or spectral. In this work we'll apply a method belonging to the latter category, which relies on expressing the features in the Fourier basis of the graph, as will be explained below.
 
@@ -200,45 +209,83 @@ Chebyshev polynomials have the advantage that they can be computed recursively t
 
 The sampling and upsampling operations in this work were proposed in \cite{ref_coma}. In each layer, the sampling operations generate a subgraph of the graph in the previous layer, such that the quadric error is minimized \cite{ref_quadric_error}. The upsampling operations are created while performing the downsampling: the coordinates of the decimated vertices with respect to the remaining vertices are stored for each layer.
 
-In this work, the input to the autoencoder is a modified version of the shapes $\textbf{s}_i\mapsto \textbf{t}_i=(\textbf{s}_i-\bar{\textbf{s}})/\textbf{S}_{ii}$.
-%$\textbf{s_i}\mapsto (\textbf{s_i}-\bar{\textbf{s})/S_{ii}$
+In this work, the input to the autoencoder is a modified version of the shapes $\textbf{s}_i\mapsto \textbf{t}_i\equiv(\textbf{s}_i-\bar{\textbf{s}})/\textbf{S}_{ii}$. \textcolor{red}{Actually, the input to the network belongs to $\mathbb{R}^{M\times 3}$, i.e. is a matrix where each channel  (column) corresponds to one spatial coordinate, but I need to come up with a good notation for this. The way it's written now makes it look like $\textbf{t}_i\in\mathbb{R}^{3M}$}.
 
-The dimension of the latent space was chosen to achieve a compromise between reconstruction error and interpretability/heritability of the components (comment for revisers: I expect interpretability and heritability to be correlated).
+The dimension of the latent space was chosen to achieve a compromise between reconstruction error and interpretability/heritability of the components. \textcolor{red}{(I expect interpretability and heritability to be correlated).} This decision will be explained in detail in section \ 
 
 \subsection{GWAS}
-According to the traditional GWAS scheme, we tested each genetic variant, $X_i\in\{0,1,2\}$, for association with each of the LV latent features $Z_j$ through a univariate linear model:
+According to the traditional GWAS scheme, we tested each genetic variant, $X_i\in\{0,1,2\}$, for association with each of the phenotypes $Y$ through a univariate linear model:
 
 \begin{equation}
-Z_j = \beta_{ij}X_i+\epsilon_{ij}
+Y = \beta_{i}X_i+\epsilon_{i}
 \end{equation}
 
-\noindent where $\epsilon_{ij}$ is the component not explained by the genotype, assumed to be normally distributed. The null hypothesis tested is that $\beta_{ij}=0$.
+\noindent where $\epsilon_{i}$ is the component not explained by the genotype, assumed to be normally distributed. The null hypothesis tested is that $\beta_{i}=0$.
 
 \subsection{Implementation details}
-The architecture of the autoencoder is explained in table \ref{table_AE_arch}.
-We ran a grid optimization scheme to determine good network parameters, both for the architecture and the learning process.
+For the autoencoder, we ran a grid optimization scheme to determine good network parameters, both for the architecture and the learning process. For each number of components $K$ in the latent space, the execution that presented the minimum mean squared error within the validation set was chosen.
+The architecture of the autoencoder is explained in table \ref{table:AE_arch}. \textcolor{red}{Maybe this table should go into the supplementary material.}
 
-All of the executions were performed using Amazon Web Services EC2 virtual machines, in particular P2 instances with NVidia K80 GPUs.
+\begin{table}[]
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+             & \textbf{LV} & \textbf{RV} & LA & RA \\ \hline
+Convolution  & 2677$\times$  & 3400 $\times$  &    &    \\ \hline
+Downsampling &             &             &    &    \\ \hline
+Convolution  &             &             &    &    \\ \hline
+Downsampling &             &             &    &    \\ \hline
+Convolution  &             &             &    &    \\ \hline
+Downsampling &             &             &    &    \\ \hline
+\end{tabular}
+\end{center}
+\label{table:AE_arch}
+\caption{Architecture of the autoencoder used for each of the cardiac chambers.}
+\end{table}
+
+
+
+All of the CoMA training executions were performed using Amazon Web Services EC2 virtual machines, in particular P2 instances with NVidia K80 GPUs.
 
 \section{Results}
 
 \subsection{Traditional cardiac indices}
+GWAS was performed on traditional cardiac indices, namely: XEDV, XESV, XEF (where $\textrm{X}\in\{\textrm{LV},
+\, \textrm{RV},\,\textrm{LA},\,\textrm{RA}\}$), LV mass (LVM) and stroke volume (SV)\footnote{Since the chambers are part of a series circuit, the stroke volume is expected to be the approximately the same regardless of the chamber that is used to compute it.}. As our segmentation approach produced endocardial and epicardial meshes only for LV, only the myorcardial mass for this chamber could be computed. Also, stroke volume was computed using LVEDV and LVESV since LV segmentation is the most reliable one.
 
-\subsection{Dimensionality reduction of 3D cardiac meshes}
-Figure \ref{fig_pca_vs_coma} shows a comparison of the reconstruction error obtained through PCA and CoMA, as a function of the number of the components $K$ of the latent space. 
+These phenotypes were previously adjusted for a set of covariates: height, weight, BMI, diastolic and systolic blood pressure, etc. Also, the obtained values were inverse-normalized in order to be able to perform a hypothesis test in an analytical manner. See the supplementary section for details.
 
 \begin{figure}
-\includegraphics[width=\linewidth]{figs/mse_pca_vs_coma.jpg}
-\caption{Dependence of the reconstruction error with the number of components in the latent space, for PCA and CoMA.}
-\label{fig_pca_vs_coma}
+\includegraphics[width=0.8\linewidth]{figs/gwas/manhattan_LVEDV_automatic_adj.png}
+\includegraphics[width=0.8\linewidth]{figs/gwas/manhattan_LVM_automatic_adj.png}
+\caption{Manhattan plots for LVEDV and LVM.}
 \end{figure}
 
 
+\subsection{Dimensionality reduction of 3D cardiac meshes}
+Figure \ref{fig:pca_vs_coma} shows a comparison of the reconstruction error obtained through PCA and CoMA, as a function of the number of the components $K$ of the latent space. 
 
 \begin{figure}
-\includegraphics[width=\linewidth]{figs/qqplot_ncomp.jpg}
-\caption{QQ plot showing the deviation of the association p-values from the uniform distribution.}
-\label{fig_qqplot_pooled}
+\includegraphics[width=\linewidth]{figs/mse_pca_vs_coma.png}
+\caption{Dependence of the reconstruction error with the number of components in the latent space, for PCA and CoMA. \textcolor{red}{If the original and reconstructed shapes had nothing to do with each other the expected value of MSE would be around 2.}}
+\label{fig:pca_vs_coma}
+\end{figure}
+
+
+\begin{figure}
+\includegraphics[width=\linewidth]{figs/gwas/2020-04-24_11_03_10_723719__LV__nz__4__gwas__qqplot__inv_norm__GBR.png}
+\includegraphics[width=\linewidth]{figs/gwas/2020-04-26_07_36_30_873605__LV__nz__8__gwas__qqplot__inv_norm__GBR.png}
+\includegraphics[width=\linewidth]{figs/gwas/2020-04-24_13_19_26_631106__LV__nz__16__gwas__qqplot__inv_norm__GBR.png}
+\caption{Q-Q plot of the GWAS $p$-values for LV (the identity line corresponds to a uniform distribution of $p$-values.)}
+\label{fig:qqplot_LV_pooled}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=\linewidth]{figs/gwas/2020-04-19_10_01_33_510833__RV__nz__4__gwas__qqplot__inv_norm__GBR.png}
+\includegraphics[width=\linewidth]{figs/gwas/2020-04-30_17_29_19_775837__RV__nz__8__gwas__qqplot__inv_norm__GBR.png}
+\includegraphics[width=\linewidth]{figs/gwas/2020-04-19_03_11_19_339030__RV__nz__16__gwas__qqplot__inv_norm__GBR.png}
+\caption{Q-Q plot of the GWAS $p$-values for RV (the identity line corresponds to a uniform distribution of $p$-values.)}
+\label{fig:qqplot_RV_pooled}
 \end{figure}
 
 \begin{figure}
@@ -281,8 +328,6 @@ $z_3^{\text{RA}}$ & ??? & 0 \\
 \end{tabular}
 \end{center}
 
-
-
 \begin{figure}
 \caption{color maps showing the projection along the normal vector of the deviation from the mean shape.}
 \end{figure}
@@ -290,14 +335,14 @@ $z_3^{\text{RA}}$ & ??? & 0 \\
 
 \subsection{GWAS}
 
-The comparison of the QQ plots for PCA and CoMA shown in figure \ref{fig_qqplot_pooled} reveals that the latter method produce more significant associations with the genotype. In other words, CoMA allows to extract phenotypes with higher heritability.
+The comparison of the Q-Q plots for PCA and CoMA shown in figures \ref{fig:qqplot_LV_pooled} and \ref{fig:qqplot_RV_pooled} reveal that the latter method produce more significant associations with the genotype. In other words, CoMA allows to extract phenotypes with higher heritability.
 
-Manhattan plots of the components of the latent space with significant SNPs. (The rest would go to the supplementary material.)
+Manhattan plots of the components of the latent space with significant SNPs are shown in figure \ref{fig:manhattan_LV_z1_nz_8}. \textcolor{red}{I have included one Manhattan plot as an example, but I have not found genetic signal for any component for the executions that I have made so far.} 
 
-\begin{figure}
-\includegraphics[width=0.8\linewidth]{figs/manhattan_LVEDV_automatic_adj.png}
-\includegraphics[width=0.8\linewidth]{figs/manhattan_LVM_automatic_adj.png}
-\caption{These figures are only placeholders.}
+\begin{figure}[ht]
+\includegraphics[width=\linewidth]{figs/gwas/2020-04-26_07_36_30_873605__LV__nz__8__gwas__manhattan__z0__inv_norm__GBR.png}
+\label{fig:manhattan_LV_z1_nz_8}
+\caption{Manhattan plot for one latent component of the LV.}
 \end{figure}
 
 
@@ -305,11 +350,11 @@ Manhattan plots of the components of the latent space with significant SNPs. (Th
 
 \textbf{Statements:}
 
-1. The convolutional mesh autoencoder learns a latent basis that allows to reconstruct the cardiac meshes with a lesser amount of components compared to PCA.
+1. \st{The convolutional mesh autoencoder learns a latent basis that allows to reconstruct the cardiac meshes with a lesser amount of components compared to PCA.} \textcolor{red}{At this stage, I was not able to obtain the results that I was expecting a priori, and my experiments show that the reconstruction error are actually similar for PCA and CoMA.}
 
-2. The components of the latent basis have easy visual interpretations.
+2. The components of the latent basis have an easy visual interpretations.
 
-3. Some of the components have genetic loci associated. 
+3. \st{Some of the components have genetic loci associated.} \textcolor{red}{I have not found a genetic signal in the components of the latent space either.} 
 
 The components of the latent space are significantly different for individuals with some diagnosed diseases, with respect to the healthy (or undiagnosed) individuals.
 
@@ -319,7 +364,7 @@ In this work, we have surveyed a set of indices describing structure of the diff
 
 Since these latent features were learnt in a unsupervised manner, the interpretation of the latent space had to be performed \emph{a posteriori}. Some of the features were related to sphericity, wall thickness and valve orientation, whereas others had no easy interpretation.
 
-The analysis of the GWAS results yielded $\NGWASHITS$ significant genetic loci at a Bonferroni threshold of $0.05/(\NIMP\times8)$. Moreover, the significance of the associations for CoMA was higher than for PCA, confirming the suitability of that technique to extract heritable phenotypes.
+\st{The analysis of the GWAS results yielded $\NGWASHITS$ significant genetic loci at a Bonferroni threshold of $0.05/(\NIMP\times8)$. Moreover, the significance of the associations for CoMA was higher than for PCA, confirming the suitability of that technique to extract heritable phenotypes.}
 
 One possible future direction of this work is to consider spatio-temporal patterns by using all the phases of the cardiac cycle.
 
@@ -336,7 +381,7 @@ One possible future direction of this work is to consider spatio-temporal patter
 \begin{thebibliography}{8}
 \bibitem{ref_rahman}
 % Rahman Attar, Marco Pereaez, Ali Gooya, Xènia Albà, Le Zhang, Milton Hoz de Vila, Aaron M Lee, Nay Aung, Elena Lukaschuk, Mihir M Sanghvi, Kenneth Fung, Jose Miguel Paiva, Stefan K Piechnik, Stefan Neubauer, Steffen E Petersen, Alejandro F Frangi. \textit{Quantitative CMR population imaging on 20,000 subjects of the UK Biobank imaging study: LV/RV quantification pipeline and its evaluation}. Medical Image Analysis. Volume 56, August 2019, Pages 26-42.
-Attar R, Perea\~nez M, Gooya A, Albà X, Zhang L, Hoz de Vila M, Lee AM, Aung N, Lukaschuk E, Sanghvi MM, Fung K, Paiva JM, Piechnik SK, Neubauer S, Petersen SE, Frangi AF. \textit{Quantitative CMR population imaging on 20,000 subjects of the UK Biobank imaging study: LV/RV quantification pipeline and its evaluation}. Medical Image Analysis. Volume 56, August 2019, Pages 26-42.
+Attar R, Perea\~nez M, Gooya A, Alb\`a X, Zhang L, Hoz de Vila M, Lee AM, Aung N, Lukaschuk E, Sanghvi MM, Fung K, Paiva JM, Piechnik SK, Neubauer S, Petersen SE, Frangi AF. \textit{Quantitative CMR population imaging on 20,000 subjects of the UK Biobank imaging study: LV/RV quantification pipeline and its evaluation}. Medical Image Analysis. Volume 56, August 2019, Pages 26-42.
 
 \bibitem{ref_biffi}
 Carlo Biffi, Antonio de Marvao, Mark I Attard, Timothy J W Dawes, Nicola Whiffin, Wenjia Bai, Wenzhe Shi, Catherine Francis, Hannah Meyer, Rachel Buchan, Stuart A Cook, Daniel Rueckert, Declan P O’Regan. \textit{Three-dimensional cardiovascular imaging-genetics: a mass univariate framework}. Bioinformatics, Volume 34, Issue 1, 01 January 2018, Pages 97–103.
