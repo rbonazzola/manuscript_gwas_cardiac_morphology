@@ -40,7 +40,7 @@ Eylem Levelt\inst{2} \and
 Sven Plein\inst{2}
 Enzo Ferrante\inst{3} \and
 Tanveer Syeda-Mahmood\inst{4}\and
-Alejandro F Frangi\inst{1,2}}
+Alejandro F Frangi\inst{1,2,5}}
 
 %
 % \authorrunning{F. Author et al.}
@@ -49,9 +49,13 @@ Alejandro F Frangi\inst{1,2}}
 %
 
 \institute{Centre for Computational Imaging and Simulation Technologies in Biomedicine (CISTIB), School of Computing and School of Medicine, University of Leeds, Leeds, UK \and
-Leeds Institute of Cardiovascular and Metabolic Medicine, School of Medicine, University of Leeds, Leeds, UK \and
+Leeds Institute of Cardiovascular and Metabolic Medicine, School of Medicine, University of Leeds, Leeds, UK
+\and
 Research Institute for Signals, Systems and Computational Intelligence, sinc(i), FICH-UNL / CONICET, Santa Fe, Argentina \and
-IBM Almaden Research Center, San Jose, USA}
+IBM Almaden Research Center, San Jose, USA
+\and
+Medical Imaging Research Center (MIRC), University Hospital Gasthuisberg. Cardiovascular Sciences and Electrical Engineering Departments, KU Leuven, Leuven, Belgium 
+}
 \maketitle              % typeset the header of the contribution
 \begin{abstract}
 The genetic basis of cardiac phenotypes is not yet well understood. Cardiac magnetic resonance (CMR) images, a rich source of structural phenotypes, as well as linked genotype information, were recently made available within the UK Biobank project. Subsequently, a genome-wide association study (GWAS) for left-ventricular (LV) function indices was published using this data, reporting novel genetic loci significantly associated with these phenotypes. However, LV morphological features are yet to be studied in this context. In this work, we performed dimensionality reduction on 3D LV meshes generated from CMR images, which allows us to learn non-local morphological features that constitute a latent basis for the shape. To this end, we used two approaches i) principal component analysis (PCA) and ii) graph-convolutional autoencoders. GWAS was performed on the components of the latent space obtained through each of the methods. Novel genetic loci were discovered which have not been reported in literature, in addition to other loci already known to be associated with cardiac phenotypes. Some of these features were found to be related to cardiac diseases, showing the potential of our approach to pinpoint genetic loci of clinical relevance.
